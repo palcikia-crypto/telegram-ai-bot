@@ -1,0 +1,37 @@
+name: Consumer
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '5 */5 * * *'
+
+jobs:
+  consumer-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка зависимостей
+        run: pip install cryptography requests
+
+      - name: Загрузка state
+        uses: actions/download-artifact@v4
+        with:
+          name: state-files
+          path: state/
+        continue-on-error: true
+
+      - name: Запуск обработки
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          mkdir -p state
+          python3 scripts/ai_process.py
+
+      - name: Загрузка обновленных артефактов
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-files
+          path: state/
+          retention-days: 7
