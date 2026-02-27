@@ -3,7 +3,7 @@ name: Consumer
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'  # каждые 5 минут
+    - cron: '*/5 * * * *'
 
 jobs:
   consumer-job:
