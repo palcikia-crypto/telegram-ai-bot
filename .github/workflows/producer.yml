@@ -2,10 +2,38 @@ name: Producer
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
 
 jobs:
-  test:
+  producer-job:
     runs-on: ubuntu-latest
     steps:
-      - name: Test
-        run: echo "Producer works"
+      - uses: actions/checkout@v4
+      - name: Add task
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p state
+          python3 - <<EOF
+import json, os, time
+queue_file = "state/queue.json"
+tasks = []
+if os.path.exists(queue_file):
+    with open(queue_file, "r") as f:
+        tasks = json.load(f)
+tasks.append({
+    "id": int(time.time()),
+    "prompt": f"Привет, время {time.strftime('%H:%M')}",
+    "processed": False
+})
+with open(queue_file, "w") as f:
+    json.dump(tasks, f, indent=2)
+EOF
+      - name: Commit queue
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state/queue.json
+          git commit -m "Add task" || echo "No changes"
+          git push
