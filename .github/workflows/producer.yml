@@ -1,61 +1,26 @@
 name: Producer
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '*/10 * * * *'
 
 jobs:
-  producer-job:
+  producer:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Установка зависимостей
-        run: pip install cryptography requests
-
-      - name: Загрузка предыдущего state
-        uses: actions/download-artifact@v4
-        with:
-          name: state-files
-          path: state/
-        continue-on-error: true
-
-      - name: Добавить задачу
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      - name: Add task
         run: |
-          mkdir -p state
-          python3 - <<'EOF'
-import os, json, time, base64
-from pathlib import Path
-from cryptography.fernet import Fernet
+          echo "Adding task..."
+          python3 scripts/add_task.py
 
-secret = os.getenv("OPENROUTER_API_KEY").encode()[:32]
-if len(secret) < 32:
-    secret = secret + b'0' * (32 - len(secret))
-key = Fernet(base64.urlsafe_b64encode(secret))
-
-queue_file = Path("state/queue.enc")
-tasks = []
-
-if queue_file.exists() and queue_file.stat().st_size > 0:
-    try:
-        tasks = json.loads(key.decrypt(queue_file.read_bytes()))
-    except:
-        tasks = []
-
-tasks.append({
-    "id": int(time.time()),
-    "prompt": f"Привет, время {time.strftime('%H:%M')}",
-    "processed": False
-})
-
-queue_file.write_bytes(key.encrypt(json.dumps(tasks).encode()))
-EOF
-
-      - name: Загрузка артефактов
-        uses: actions/upload-artifact@v4
-        with:
-          name: state-files
-          path: state/
-          retention-days: 7
+      - name: Commit queue
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state/queue.json
+          git commit -m "Update queue" || echo "No changes"
+          git push
