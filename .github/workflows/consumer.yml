@@ -43,7 +43,7 @@ for task in tasks:
                 },
                 json={
                     "model": "openai/gpt-3.5-turbo",
-                    "messages": [{"role": "user", "content": task["prompt"]}]
+                    "messages": [{"role": "user", "content": task['prompt']}]
                 }
             )
             data = resp.json()
